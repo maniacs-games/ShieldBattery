@@ -38,7 +38,7 @@ export function isTeamEmpty(team) {
   return team.slots.every(slot => slot.type === 'open' || slot.type === 'closed')
 }
 
-export function getslotsPerControlledTeam(gameSubType) {
+export function getSlotsPerControlledTeam(gameSubType) {
   switch (gameSubType) {
     case 2: return [4, 4]
     case 3: return [3, 3, 2]
@@ -56,7 +56,7 @@ export function getSlotsPerTeam(gameType, gameSubType, numSlots, umsForces) {
       return [gameSubType, numSlots - gameSubType]
     case 'teamMelee':
     case 'teamFfa':
-      return getslotsPerControlledTeam(gameSubType)
+      return getSlotsPerControlledTeam(gameSubType)
     case 'ums':
       return umsForces.map(f => f.players.length)
     default:

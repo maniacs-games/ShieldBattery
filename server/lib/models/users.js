@@ -131,6 +131,23 @@ export async function findAllUsernamesWithEmail(email) {
   }
 }
 
+// Takes an array of names and returns a Map of name -> user ID. Any users that can't be found won't
+// be present in the resulting Map.
+export async function findUserIdsForNames(names) {
+  const { client, done } = await db()
+  try {
+    const result = await client.query(
+        'SELECT id, name FROM users WHERE name = ANY ($1)',
+        [names])
+    return result.rows.reduce((r, row) => {
+      r.set(row.name, row.id)
+      return r
+    }, new Map())
+  } finally {
+    done()
+  }
+}
+
 export default {
   create: createUser,
   find: findUser,

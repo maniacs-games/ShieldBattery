@@ -1,5 +1,6 @@
 import { List, Map, Record, Set } from 'immutable'
 import errors from 'http-errors'
+import logger from '../logging/logger'
 import { Mount, Api, registerApiRoutes } from '../websockets/api-decorators'
 import validateBody from '../websockets/validate-body'
 import pickServer from '../rally-point/pick-server'
@@ -7,10 +8,14 @@ import pingRegistry from '../rally-point/ping-registry'
 import routeCreator from '../rally-point/route-creator'
 import * as Lobbies from '../lobbies/lobby'
 import * as Slots from '../lobbies/slot'
+import createGame from '../games/create-game'
+import { deleteRecordForGame } from '../models/games'
+import { deleteUserRecordsForGame } from '../models/games-users'
 import { mapInfo } from '../maps/store'
 import CancelToken from '../../../app/common/async/cancel-token'
 import createDeferred from '../../../app/common/async/deferred'
 import rejectOnTimeout from '../../../app/common/async/reject-on-timeout'
+import swallowNonBuiltins from '../../../app/common/async/swallow-non-builtins'
 import { LOBBY_NAME_MAXLENGTH } from '../../../app/common/constants'
 import {
   isUms,
@@ -51,6 +56,7 @@ const LoadingData = new Record({
   finishedUsers: new Set(),
   cancelToken: null,
   deferred: null,
+  gameId: null,
 })
 
 export const LoadingDatas = {
@@ -511,7 +517,7 @@ export class LobbyApi {
     const gameStart = this._doGameStart(lobbyName, cancelToken)
     // Swallow any errors from gameStart, they're all things we know about (and are handled by the
     // combined catch below properly, so no point in getting unhandled rejection logs from them)
-    gameStart.catch(() => {})
+    gameStart.catch(swallowNonBuiltins)
     rejectOnTimeout(gameStart, LOBBY_START_TIMEOUT + 5000).catch(() => {
       cancelToken.cancel()
       if (!this.lobbies.has(lobbyName)) {
@@ -550,6 +556,10 @@ export class LobbyApi {
     this.lobbyCountdowns = this.lobbyCountdowns.delete(lobbyName)
     lobby = this.lobbies.get(lobbyName)
     const gameLoaded = createDeferred()
+    // Silence errors so they don't show up as unhandled rejections, they're always from
+    // cancellations
+    gameLoaded.catch(swallowNonBuiltins)
+
     this.loadingLobbies = this.loadingLobbies.set(lobbyName, new LoadingData({
       cancelToken,
       deferred: gameLoaded,
@@ -608,6 +618,42 @@ export class LobbyApi {
       routeCreations = []
     }
 
+    const gameConfig = {
+      gameType: lobby.gameType,
+      gameSubType: lobby.gameSubType,
+      teams: lobby.teams.map(team =>
+          team.slots.filter(s =>
+              s.type === 'human' || s.type === 'computer' || s.type === 'umsComputer')
+            .map(s => ({
+              name: s.name,
+              race: s.race,
+              isComputer: s.type === 'computer' || s.type === 'umsComputer'
+            })).toArray()
+          ).toArray()
+    }
+    const gameInfo = await createGame(lobby.map.hash, gameConfig)
+    if (!this.loadingLobbies.has(lobbyName)) {
+      // If we were cancelled between the call to createGame and now, a loadingLobbies entry won't
+      // exist, and our cancellation handler (_maybeCancelLoading) won't run to delete these
+      // records. So we gotta delete them here. Bleh.
+      await Promise.all([
+        deleteRecordForGame(gameInfo.gameId),
+        deleteUserRecordsForGame(gameInfo.gameId),
+      ])
+      throw new Error('Game loading cancelled')
+    }
+
+    this.loadingLobbies = this.loadingLobbies.setIn([lobbyName, 'gameId'], gameInfo.id)
+    cancelToken.throwIfCancelling()
+
+    for (const [ name, resultCode ] of gameInfo.resultCodes) {
+      this._publishToPlayer(lobby, name, {
+        type: 'setResultCode',
+        gameId: gameInfo.gameId,
+        resultCode,
+      })
+    }
+
     const routes = await Promise.all(routeCreations)
     cancelToken.throwIfCancelling()
 
@@ -620,7 +666,6 @@ export class LobbyApi {
           .update(p2, new List(), val => val.push({ for: p1.id, server, routeId, playerId: p2Id }))
       )
     }, new Map())
-
 
     for (const [ player, routes ] of routesByPlayer.entries()) {
       this._publishToPlayer(lobby, player.name, {
@@ -665,6 +710,16 @@ export class LobbyApi {
     this.loadingLobbies = this.loadingLobbies.delete(lobby.name)
     loadingData.cancelToken.cancel()
     loadingData.deferred.reject(new Error('Game loading cancelled'))
+
+    if (loadingData.gameId) {
+      deleteRecordForGame(loadingData.gameId).catch(err => {
+        logger.error({ err }, 'error deleting game record on cancel')
+      })
+      deleteUserRecordsForGame(loadingData.gameId).catch(err => {
+        logger.error({ err }, 'error deleting game user records on cancel')
+      })
+    }
+
     this._publishTo(lobby, {
       type: 'cancelLoading',
     })
