@@ -157,9 +157,8 @@ export default class Faq extends React.Component {
           <h3>Frequently Asked Questions</h3>
           <ul>
             {
-              questions.map((q, i) => <li>
-                <FragmentLink key={`question-${i}`} to='/faq' fragment={makeQuestionId(q.question)}>
-                  {q.question}</FragmentLink>
+              questions.map((q, i) => <li key={`question-${i}`}>
+                <FragmentLink to='/faq' fragment={makeQuestionId(q.question)}>{q.question}</FragmentLink>
               </li>)
             }
           </ul>
