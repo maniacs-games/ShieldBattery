@@ -16,9 +16,6 @@ files:
 - "!node_modules/humanize-plus/**/*"
 nsis:
   artifactName: "${productName}-setup-${version}.${ext}"
-  # There's currently a bug with Windows Defender that makes it slow things down considerably if
-  # NSIS is in unicode mode
-  unicode: false
 win:
   certificateSubjectName: Travis Collins
   icon: icon.ico

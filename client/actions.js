@@ -21,6 +21,9 @@ export const ADMIN_ACCEPT_USER = 'ADMIN_ACCEPT_USER'
 export const ADMIN_SET_PERMISSIONS_BEGIN = 'ADMIN_SET_PERMISSIONS_BEGIN'
 export const ADMIN_SET_PERMISSIONS = 'ADMIN_SET_PERMISSIONS'
 
+// The AudioManager has finished initializing and is ready to play sounds
+export const AUDIO_MANAGER_INITIALIZED = 'AUDIO_MANAGER_INITIALIZED'
+
 export const AUTH_CHANGE_BEGIN = 'AUTH_CHANGE_BEGIN'
 export const AUTH_LOG_IN = 'AUTH_LOG_IN'
 export const AUTH_LOG_OUT = 'AUTH_LOG_OUT'
@@ -178,6 +181,8 @@ export const LOBBY_UPDATE_RACE_CHANGE = 'LOBBY_UPDATE_RACE_CHANGE'
 export const LOBBY_UPDATE_SLOT_CHANGE = 'LOBBY_UPDATE_SLOT_CHANGE'
 // A new slot has been created in a lobby we're in (this could indicate player joining)
 export const LOBBY_UPDATE_SLOT_CREATE = 'LOBBY_UPDATE_SLOT_CREATE'
+// Our status has changed, ie. one of our clients either joined or left the lobby
+export const LOBBY_UPDATE_STATUS = 'LOBBY_UPDATE_STATUS'
 
 // We are starting the process of saving the settings
 export const LOCAL_SETTINGS_SET_BEGIN = 'LOCAL_SETTINGS_SET_BEGIN'
@@ -215,6 +220,14 @@ export const SERVER_STATUS = 'SERVER_STATUS'
 export const SNACKBAR_OPEN = 'SNACKBAR_OPEN'
 export const SNACKBAR_CLOSE = 'SNACKBAR_CLOSE'
 
+// The process of attempting to downgrade an existing StarCraft installation has begun
+export const STARCRAFT_DOWNGRADE_BEGIN = 'STARCRAFT_DOWNGRADE_BEGIN'
+// The process of downgrading an existing StarCraft installation has succeeded or failed. On
+// success, it is *likely* that the StarCraft path is now valid
+export const STARCRAFT_DOWNGRADE = 'STARCRAFT_DOWNGRADE'
+// An updated downgrade path usage status, stating whether or not we're set to use an alternate
+// downgraded version of StarCraft for launching
+export const STARCRAFT_DOWNGRADE_PATH_USAGE = 'STARCRAFT_DOWNGRADE_PATH_USAGE'
 // An updated StarCraft path validity status, stating whether or not the current path setting
 // contains an accessible starcraft.exe
 export const STARCRAFT_PATH_VALIDITY = 'STARCRAFT_PATH_VALIDITY'
@@ -222,9 +235,11 @@ export const STARCRAFT_PATH_VALIDITY = 'STARCRAFT_PATH_VALIDITY'
 // current path is a version we are compatible with
 export const STARCRAFT_VERSION_VALIDITY = 'STARCRAFT_VERSION_VALIDITY'
 
-// The server has finished subscribing us to the things we need to be (e.g. lobbies) and giving us
-// initial data
-export const SUBSCRIPTIONS_LOADING_COMPLETE = 'SUBSCRIPTIONS_LOADING_COMPLETE'
+// The server has finished subscribing this particular client to the things it needs to be in (e.g.
+// lobbies) and giving it initial data
+export const SUBSCRIPTIONS_CLIENT_LOADING_COMPLETE = 'SUBSCRIPTIONS_CLIENT_LOADING_COMPLETE'
+// The server has finished subscribing this user (across clients) to the things it needs
+export const SUBSCRIPTIONS_USER_LOADING_COMPLETE = 'SUBSCRIPTIONS_USER_LOADING_COMPLETE'
 
 // The auto-updater has found that a new version is available and a download is in progress
 export const UPDATER_NEW_VERSION_FOUND = 'UPDATER_NEW_VERSION_FOUND'

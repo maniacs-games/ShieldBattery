@@ -19,6 +19,7 @@ import {
   LOBBY_UPDATE_RACE_CHANGE,
   LOBBY_UPDATE_SLOT_CHANGE,
   LOBBY_UPDATE_SLOT_CREATE,
+  LOBBY_UPDATE_STATUS,
 } from '../actions'
 import {
   NEW_CHAT_MESSAGE,
@@ -29,17 +30,40 @@ import { dispatch } from '../dispatch-registry'
 import rallyPointManager from '../network/rally-point-manager-instance'
 import mapStore from '../maps/map-store-instance'
 import activeGameManager from '../active-game/active-game-manager-instance'
+import audioManager, { SOUNDS } from '../audio/audio-manager-instance'
 import { getIngameLobbySlotsWithIndexes } from '../../app/common/lobbies'
 import { openSnackbar } from '../snackbars/action-creators'
 
 const ipcRenderer =
     process.webpackEnv.SB_ENV === 'electron' ? require('electron').ipcRenderer : null
 
-let countdownTimer = null
-function clearCountdownTimer() {
-  if (countdownTimer) {
-    clearInterval(countdownTimer)
-    countdownTimer = null
+const countdownState = {
+  timer: null,
+  sound: null,
+  atmosphere: null,
+}
+function fadeAtmosphere(fast = true) {
+  const { atmosphere } = countdownState
+  if (atmosphere) {
+    const timing = fast ? 1.5 : 3
+    atmosphere.gainNode.gain.exponentialRampToValueAtTime(0.001, audioManager.currentTime + timing)
+    atmosphere.source.stop(audioManager.currentTime + timing + 0.1)
+    countdownState.atmosphere = null
+  }
+}
+function clearCountdownTimer(leaveAtmosphere = false) {
+  const { timer, sound, atmosphere } = countdownState
+  if (timer) {
+    clearInterval(timer)
+    countdownState.timer = null
+  }
+  if (sound) {
+    sound.gainNode.gain.exponentialRampToValueAtTime(0.001, audioManager.currentTime + 0.5)
+    sound.source.stop(audioManager.currentTime + 0.6)
+    countdownState.sound = null
+  }
+  if (!leaveAtmosphere && atmosphere) {
+    fadeAtmosphere()
   }
 }
 
@@ -64,10 +88,16 @@ const eventToAction = {
     }
   },
 
-  slotCreate: (name, event) => ({
-    type: LOBBY_UPDATE_SLOT_CREATE,
-    payload: event,
-  }),
+  slotCreate: (name, event) => {
+    if (event.slot.type === 'human') {
+      audioManager.playSound(SOUNDS.JOIN_ALERT)
+    }
+
+    return {
+      type: LOBBY_UPDATE_SLOT_CREATE,
+      payload: event,
+    }
+  },
 
   raceChange: (name, event) => ({
     type: LOBBY_UPDATE_RACE_CHANGE,
@@ -147,15 +177,17 @@ const eventToAction = {
       type: LOBBY_UPDATE_COUNTDOWN_START,
       payload: tick,
     })
+    countdownState.sound = audioManager.playFadeableSound(SOUNDS.COUNTDOWN)
+    countdownState.atmosphere = audioManager.playFadeableSound(SOUNDS.ATMOSPHERE)
 
-    countdownTimer = setInterval(() => {
+    countdownState.timer = setInterval(() => {
       tick -= 1
       dispatch({
         type: LOBBY_UPDATE_COUNTDOWN_TICK,
         payload: tick
       })
       if (!tick) {
-        clearCountdownTimer()
+        clearCountdownTimer(true /* leaveAtmosphere */)
       }
     }, 1000)
   },
@@ -168,7 +200,7 @@ const eventToAction = {
   },
 
   setupGame: (name, event) => (dispatch, getState) => {
-    clearCountdownTimer()
+    clearCountdownTimer(true /* leaveAtmosphere */)
     const {
       lobby,
       settings,
@@ -210,9 +242,13 @@ const eventToAction = {
     dispatch({ type: LOBBY_UPDATE_LOADING_CANCELED })
   },
 
-  gameStarted: (name, event) => ({
-    type: LOBBY_UPDATE_GAME_STARTED,
-  }),
+  gameStarted: (name, event) => {
+    fadeAtmosphere(false /* fast */)
+
+    return {
+      type: LOBBY_UPDATE_GAME_STARTED,
+    }
+  },
 
   chat: (name, event) => {
     if (ipcRenderer) {
@@ -224,7 +260,12 @@ const eventToAction = {
       type: LOBBY_UPDATE_CHAT_MESSAGE,
       payload: event,
     }
-  }
+  },
+
+  status: (name, event) => ({
+    type: LOBBY_UPDATE_STATUS,
+    payload: event,
+  })
 }
 
 export default function registerModule({ siteSocket }) {
@@ -236,6 +277,7 @@ export default function registerModule({ siteSocket }) {
   }
   siteSocket.registerRoute('/lobbies/:lobby', lobbyHandler)
   siteSocket.registerRoute('/lobbies/:lobby/:playerName', lobbyHandler)
+  siteSocket.registerRoute('/lobbies/:lobby/:userId/:clientId', lobbyHandler)
 
   siteSocket.registerRoute('/lobbies', (route, event) => {
     const { action, payload } = event
