@@ -94,11 +94,11 @@ const questions = [
   },
 ]
 
-const makeQuestionId = (question) => {
+const makeQuestionId = question => {
   return question.replace(/\s/g, '-')
 }
 
-const scrollQuestionIntoView = (id) => {
+const scrollQuestionIntoView = id => {
   const question = document.getElementById(id)
 
   if (question) {
@@ -122,7 +122,8 @@ class FragmentLink extends React.Component {
   }
 
   render() {
-    return <Link to={`${this.props.to}#${this.props.fragment}`} onClick={this.onClick}>{this.props.children}</Link>
+    return (<Link to={`${this.props.to}#${this.props.fragment}`} onClick={this.onClick}>
+      {this.props.children}</Link>)
   }
 }
 
@@ -158,7 +159,8 @@ export default class Faq extends React.Component {
           <ul>
             {
               questions.map((q, i) => <li key={`question-${i}`}>
-                <FragmentLink to='/faq' fragment={makeQuestionId(q.question)}>{q.question}</FragmentLink>
+                <FragmentLink to='/faq' fragment={makeQuestionId(q.question)}>
+                  {q.question}</FragmentLink>
               </li>)
             }
           </ul>
