@@ -214,6 +214,16 @@ export const MATCHMAKING_CANCEL = 'MATCHMAKING_CANCEL'
 export const MATCHMAKING_FIND_BEGIN = 'MATCHMAKING_FIND_BEGIN'
 // The server has responded with success/failure to us starting to find game
 export const MATCHMAKING_FIND = 'MATCHMAKING_FIND'
+// We are starting the process of getting the matchmaking preferences from a server, for a
+// particular user and a particular matchmaking type
+export const MATCHMAKING_GET_PREFERENCES_BEGIN = 'MATCHMAKING_GET_PREFERENCES_BEGIN'
+// The server has responded with success/failure to our getting of matchmaking preferences
+export const MATCHMAKING_GET_PREFERENCES = 'MATCHMAKING_GET_PREFERENCES'
+// We are starting the process of setting the matchmaking preferences, which is done when a user
+// joins the matchmaking queue
+export const MATCHMAKING_SET_PREFERENCES_BEGIN = 'MATCHMAKING_SET_PREFERENCES_BEGIN'
+// The server has responded with success/failure to our setting the matchmaking preferences
+export const MATCHMAKING_SET_PREFERENCES = 'MATCHMAKING_SET_PREFERENCES'
 // Some (or all) of the players have failed to accept the match
 export const MATCHMAKING_UPDATE_ACCEPT_MATCH_FAILED = 'MATCHMAKING_UPDATE_ACCEPT_MATCH_FAILED'
 // The accept match time has changed

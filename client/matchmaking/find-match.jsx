@@ -1,56 +1,93 @@
 import React from 'react'
 import { connect } from 'react-redux'
-import { findMatch } from './action-creators'
+import { Set } from 'immutable'
+import { findMatch, getPreferences, setPreferences } from './action-creators'
 import { closeOverlay } from '../activities/action-creators'
 import styles from './find-match.css'
 
-import Option from '../material/select/option.jsx'
+import CheckBox from '../material/check-box.jsx'
+import RacePicker from '../lobbies/race-picker.jsx'
 import RaisedButton from '../material/raised-button.jsx'
-import Select from '../material/select/select.jsx'
-import form from '../forms/form.jsx'
-import SubmitOnEnter from '../forms/submit-on-enter.jsx'
 
-@form()
-class FindMatchForm extends React.Component {
-  render() {
-    const { onSubmit, bindCustom } = this.props
+// TODO(2Pac): Remove this once we start supporting more matchmaking types
+const MATCHMAKING_TYPE = '1v1'
 
-    return (<form noValidate={true} onSubmit={onSubmit}>
-      <SubmitOnEnter />
-      <Select {...bindCustom('type')} label='Type' tabIndex={0}>
-        <Option key='1v1' value='1v1' text='1v1' />
-      </Select>
-      <Select {...bindCustom('race')} label='Race' tabIndex={0}>
-        <Option key='z' value='z' text='Zerg' />
-        <Option key='p' value='p' text='Protoss' />
-        <Option key='t' value='t' text='Terran' />
-        <Option key='r' value='r' text='Random' />
-      </Select>
-
-      <RaisedButton label='Find' onClick={onSubmit} />
-    </form>)
-  }
-}
-
-@connect()
+@connect(state => ({ preferences: state.matchmakingPreferences, auth: state.auth }))
 export default class FindMatch extends React.Component {
-  render() {
-    const model = {
-      type: '1v1',
-      race: 'r',
+  state = {
+    useAlternateRace: false,
+  }
+
+  componentDidMount() {
+    const { user } = this.props.auth
+    // this.props.dispatch(getPreferences(user.name, MATCHMAKING_TYPE))
+  }
+
+  renderAlternateRace() {
+    const { useAlternateRace } = this.state
+    if (!useAlternateRace) {
+      return null
     }
 
-    return (<div className={styles.root}>
-      <h3>Find match</h3>
-      <FindMatchForm model={model} onSubmit={this.onSubmit} />
+    return (<div>
+      <h5 className={styles.alternateRaceTitle}>Alternate race</h5>
+      <h6 className={styles.alternateRaceCaption}>
+        Select a race to be used whenever your opponent has selected the same primary race.
+      </h6>
+      <RacePicker className={styles.racePicker} race='r' onSetRace={this.onSetAlternateRace} />
     </div>)
   }
 
-  onSubmit = async form => {
-    const { dispatch } = this.props
-    const { type, race } = form.getModel()
+  render() {
+    const { useAlternateRace } = this.state
 
-    dispatch(findMatch(type, race))
-    dispatch(closeOverlay())
+    return (<div className={styles.root}>
+      <div>
+        <h3 className={styles.title}>Find match</h3>
+        <h5 className={styles.raceTitle}>Race</h5>
+        <RacePicker className={styles.racePicker} race='r' onSetRace={this.onSetRace} />
+        <CheckBox label='Use alternate race to avoid mirror matchups'
+            checked={useAlternateRace} onChange={this.onUseAlternateRaceClick} />
+        { this.renderAlternateRace() }
+        <h5 className={styles.preferredMapsTitle}>Preferred maps</h5>
+        <h6 className={styles.preferredMapsCaption}>
+          Select up to 2 maps to be used in the per-match map pool. Your selections will be combined
+          with your opponent's to form the 4 map pool. Any unused selections will be replaced with a
+          random map choice for each match.
+        </h6>
+      </div>
+      <div>
+        <RaisedButton label='Find match' onClick={this.onFindMatchClick} />
+      </div>
+    </div>)
+  }
+
+  onSetRace = race => {
+    this.setState({
+      race,
+    })
+  }
+
+  onUseAlternateRaceClick = event => {
+    this.setState({
+      useAlternateRace: event.target.checked,
+    })
+  }
+
+  onSetAlternateRace = alternateRace => {
+    this.setState({
+      alternateRace,
+    })
+  }
+
+  onFindMatchClick = () => {
+    const { dispatch, matchmakingPreferences, auth: { user: { name: username } } } = this.props
+    getPreferences(username, MATCHMAKING_TYPE)
+    /* this.props.dispatch(setPreferences(username, MATCHMAKING_TYPE, preferences))
+    const preferences = matchmakingPreferences.get([username, MATCHMAKING_TYPE])
+
+    dispatch(findMatch(MATCHMAKING_TYPE, race, alternateRace))
+    dispatch(setPreferences(username, MATCHMAKING_TYPE, preferences))
+    dispatch(closeOverlay())*/
   }
 }

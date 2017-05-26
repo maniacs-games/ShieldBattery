@@ -1,3 +1,52 @@
+@value colorTextPrimary, colorTextSecondary, colorTextFaint from '../styles/colors.css';
+@value row, col, exact, grow, shrink, itemsCenter, justifyCenter from '../styles/flex.css';
+@value title, subhead, caption, headline from '../styles/typography.css';
+
 .root {
+  composes: col;
   padding: 16px;
+}
+
+.title {
+  composes: headline grow;
+  margin: 0;
+}
+
+.faintSubhead {
+  composes: subhead;
+  color: colorTextFaint;
+  margin: 0;
+}
+
+.faintCaption {
+  composes: caption;
+  color: colorTextFaint;
+  margin: 0;
+}
+
+.raceTitle {
+  composes: faintSubhead;
+  margin: 4px 0;
+}
+
+.racePicker {
+  padding: 8px 0;
+}
+
+.alternateRaceTitle {
+  composes: faintSubhead;
+  margin: 4px 0;
+}
+
+.alternateRaceCaption {
+  composes: faintCaption;
+}
+
+.preferredMapsTitle {
+  composes: faintSubhead;
+  margin: 32px 0 4px 0;
+}
+
+.preferredMapsCaption {
+  composes: faintCaption;
 }
